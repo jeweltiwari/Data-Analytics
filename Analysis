@@ -24,6 +24,41 @@ fao_India_2013 %>%
     theme(axis.text.x = element_text(angle = 90)) +
     guides(fill = FALSE)
 #identifying the total production 
-fao_India_total <- fao_India_2013 %>%
-    group_by(Item, year) %>%
-    summarise(total = sum(consumption))
+fao_India_food <- fao_India %>%
+    filter(Element == "Food")
+fao_India_feed <- fao_India %>%
+    filter(Element == "Feed")
+
+fao_India_food %>%
+    ggplot(aes(x = Item, y = consumption, fill = Item)) +
+    geom_bar(stat= "Identity") +
+    theme(axis.text.x = element_text(angle = 90)) +
+    guides(fill = FALSE)
+
+#looks like we care consuming a lot of milk products
+fao_India_feed %>%
+    ggplot(aes(x=Item, y= consumption, fill = Item)) +
+    geom_bar(stat= "Identity") +
+    theme(axis.text.x = element_text(angle = 90)) +
+    guides(fill = FALSE)
+
+#lets look at the trend in consumption of "Milk- excluding butter"
+food_India_Milk1 <- fao_India_feed %>%
+    filter(Item == "Milk - Excluding Butter")
+
+food_India_Milk2 <- fao_India_food %>%
+    filter(Item == "Milk - Excluding Butter")
+
+    
+ggplot(data = food_India_Milk2, aes(x= year, y = consumption))+
+    geom_line() +
+    food_India_Milk1 %>%
+    ggplot(aes(x= year, y= consumption)) +
+    geom_line()
+
+
+ggplot() +
+    geom_line(data = food_India_Milk1, aes(x= year, y = consumption, color = "red")) +
+    geom_line(data = food_India_Milk2, aes(x= year, y = consumption, color = "blue"))
+
+#it seems that we might be importing Milk products to satisfy our demands
