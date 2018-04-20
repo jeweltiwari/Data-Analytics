@@ -1,0 +1,152 @@
+dir()
+setwd("C:/Users/pc/Desktop/My Analytics Projects/Wine_PCA")
+library(tidyverse)
+
+wines <- read_csv("wine.csv")
+head(wines)
+
+#we will remove the customer segement column as PCA analysis only focuses on unlabeled data
+wines <- wines[,-14]
+
+#we will begin by exploring and visualizing the data
+glimpse(wines)
+
+#lets start by creating a histogram of each attribute using ggplot
+
+wines %>%
+    gather(Attributes, value, 1:13) %>%
+    ggplot(aes(x = value)) +
+    geom_histogram(fill = "lightblue2", color = "black") +
+    facet_wrap(~Attributes, scales = "free_x") +
+    labs(x="Values", y = "Frequency")
+
+
+#we now focus on identfying the correlation between different attributes
+library(corrplot)
+corrplot(cor(wines), type = "upper", method = "ellipse", tl.cex = 0.5)
+
+#we can observe that there is a stron relation between Total Phenol and Flavanoids
+#we will create a linear equation between the two
+
+
+wines %>%
+    ggplot(aes(x= Total_Phenols, y = Flavanoids)) +
+    geom_point() +
+    geom_smooth(method = "lm", se = FALSE)
+
+#we have concluded the explaatory analysis so we now focus towards K-mean algorithm
+
+#we begin by normalizing to adjust values
+winesNorm <- as.data.frame(scale(wines))
+
+install.packages("gridExtra")
+library(gridExtra)
+
+#Original Data
+p1 <- wines %>%
+    ggplot(aes(x = Alcohol, y = Malic_Acid)) +
+    geom_point() +
+    labs(title = "Original Data")
+
+#Normalized Data
+p2 <- winesNorm %>%
+    ggplot(aes(x=Alcohol, y = Malic_Acid)) +
+    geom_point() +
+    labs(title = "Original Data")
+
+#Subplot
+grid.arrange(p1,p2, ncol = 2)
+
+#The points in normlized and original data are the same except the scales have changed
+
+
+#K-means execution
+#we will analyse the outputs of the functions so returned
+set.seed(1234)
+wines_km <- kmeans(wines, centers = 2)
+#clusters returns the vector of integers indication to which cluster each point belongs
+
+wines_km$cluster
+#centers: a matrix of cluster centers
+wines_km$centers
+
+#size: The number of points in each cluster
+wines_km$size
+
+#Additionally, the kmeans() function returns some ratios that let us know 
+#how compact is a cluster and how different are several clusters among themselves.
+#betweenss. The between-cluster sum of squares. 
+#In an optimal segmentation, one expects this ratio to be as higher as possible, 
+#since we would like to have heterogeneous clusters.
+#withinss. Vector of within-cluster sum of squares, one component per cluster. 
+#In an optimal segmentation, one expects this ratio 
+#to be as lower as possible for each cluster, 
+#since we would like to have homogeneity within the clusters.
+#tot.withinss. Total within-cluster sum of squares.
+#totss. The total sum of squares.
+
+#between cluster sum of squares
+wines_km$betweenss
+
+#within cluster sum of squares
+wines_km$withinss
+
+#total of within cluster sum of squares
+wines_km$tot.withinss
+
+#total sum of squares
+wines_km$totss
+
+
+#How Many Clusters
+#To Study Graphically which value of K gives us the best partition, we can plot betweenss,
+#and tot.withinss vs choice of K
+
+bss <- numeric()
+wss <- numeric()
+
+set.seed(1234)
+for(i in 1:10) {
+    
+    #for each k calculate betweenss and tot.withinss
+    bss[i] <- kmeans(winesNorm, centers = i)$betweenss
+    wss[i] <- kmeans(winesNorm, centers = i)$tot.withinss
+}
+
+
+#Between cluster sum of squares and k-means
+qplot(1:10,bss, geom= c("point", "line"),
+            xlab = "Number of Clusters", ylab = "Between Cluster sum of squares") +
+    scale_x_continuous(breaks = seq(0,10,1))
+p3
+
+
+#Total within clusters sum of squares and k-means
+p4 <- qplot(1:10, wss, geom = c("point", "line"),
+      xlab = "Number of clusters", ylab = "Total within clusters sum of squares") +
+    scale_x_continuous(breaks = seq(0,10,1))
+
+
+#subplot
+grid.arrange(p3,p4, ncol = 2)
+
+
+#Based on the graphical representation the best value of k(clusters) the number
+#of clusters selected is 3
+
+
+#execution of k-means with clusters = 3
+set.seed(1234)
+wines_k3 <- kmeans(winesNorm, centers = 3)
+
+aggregate(wines, by = list(wines_k3$cluster), mean)
+
+
+#load library
+library(GGally)
+
+ggpairs(cbind(wines, Cluster = as.factor(wines_k3$cluster)),
+        columns = 1:6, aes(color = Cluster, alpha = 0.5),
+        lower = list(continuous = "points"),
+        upper = list(continuous = "blank"),
+        axisLabels = "none", switch = "both")
